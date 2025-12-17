@@ -1,34 +1,38 @@
-const express = require("express");
-const authRoutes = require("./routes/authRoutes");
-const cors = require("cors");
 require("dotenv").config();
-console.log("ENV CHECK:", process.env.DB_HOST, process.env.DB_USER);
+const express = require("express");
+const cors = require("cors");
+
+const authRoutes = require("./routes/authRoutes");
+const videoRoutes = require("./routes/videoRoutes");
+const pool = require("./models/db");
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
-// Test API route
+// Health check
 app.get("/ping", (req, res) => {
-    res.json({ message: "Backend is running successfully" });
+  res.json({ message: "Backend is running successfully" });
 });
 
-const pool = require("./models/db");
-
+// DB test (Postgres-safe)
 app.get("/test-db", async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT 1");
-    res.json({ success: true, rows });
+    const result = await pool.query("SELECT 1");
+    res.json({ success: true, rows: result.rows });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "DB connection failed", details: err.message });
+    console.error("DB test error:", err);
+    res.status(500).json({ error: "DB connection failed" });
   }
 });
 
+// Routes
+app.use("/auth", authRoutes);
+app.use("/videos", videoRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.use("/auth", authRoutes);
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
